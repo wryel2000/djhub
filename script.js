@@ -64,13 +64,16 @@ function update() {
     avatar.setVelocityY(0);
   }
 }
-// Configuração do Pusher
-const pusher = new Pusher('9e46593689640f3ea9ec', { // Substitua pela sua chave do Pusher
-  cluster: 'sa1', // Substitua pelo seu cluster
-  encrypted: true
+// Configuração do PeerJS
+const peer = new Peer({
+  host: '0.peerjs.com',
+  port: 443,
+  path: '/',
+  secure: true,
+  debug: 3
 });
 
-const channel = pusher.subscribe('chat');
+let conn;
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
@@ -84,9 +87,33 @@ function addMessage(message) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight; // Rola para a última mensagem
 }
 
-// Ouvir novas mensagens
-channel.bind('message', (data) => {
-  addMessage(`${data.nick}: ${data.message}`);
+// Conectar a outro peer
+function connectToPeer(peerId) {
+  conn = peer.connect(peerId);
+  conn.on('open', () => {
+    addMessage('Conectado ao chat!');
+    conn.on('data', (data) => {
+      addMessage(data);
+    });
+  });
+}
+
+// Iniciar conexão
+peer.on('open', (id) => {
+  addMessage(`Seu ID: ${id}`);
+  const otherPeerId = prompt('Digite o ID do outro usuário para conectar:');
+  if (otherPeerId) {
+    connectToPeer(otherPeerId);
+  }
+});
+
+// Receber conexão
+peer.on('connection', (connection) => {
+  conn = connection;
+  addMessage('Alguém se conectou ao chat!');
+  conn.on('data', (data) => {
+    addMessage(data);
+  });
 });
 
 // Enviar mensagem ao pressionar Enter
@@ -94,8 +121,11 @@ messageInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter' && messageInput.value.trim() !== '') {
     const message = messageInput.value.trim();
     const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
-    channel.trigger('client-message', { nick, message }); // Envia a mensagem
-    addMessage(`${nick}: ${message}`); // Exibe a mensagem localmente
+    const fullMessage = `${nick}: ${message}`;
+    if (conn && conn.open) {
+      conn.send(fullMessage); // Envia a mensagem
+      addMessage(fullMessage); // Exibe a mensagem localmente
+    }
     messageInput.value = ''; // Limpa o campo de input
   }
 });
