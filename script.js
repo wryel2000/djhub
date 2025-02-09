@@ -77,6 +77,7 @@ const peer = new Peer({
 const HOST_ID = 'SALA123'; // Defina um ID fixo para o host
 
 let hostConnection;
+let isHost = false;
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
@@ -88,6 +89,32 @@ function addMessage(message) {
   messageElement.textContent = message;
   messagesDiv.appendChild(messageElement);
   messagesDiv.scrollTop = messagesDiv.scrollHeight; // Rola para a última mensagem
+}
+
+// Função para enviar mensagem para todos os conectados (apenas para o host)
+function broadcast(message) {
+  Object.values(peer.connections).forEach(connections => {
+    connections.forEach(conn => {
+      if (conn.open) {
+        conn.send(message);
+      }
+    });
+  });
+}
+
+// Iniciar conexão como host
+function startAsHost() {
+  isHost = true;
+  addMessage('Você é o host da sala!');
+
+  // Receber conexões de outros usuários
+  peer.on('connection', (connection) => {
+    addMessage('Novo usuário conectado!');
+    connection.on('data', (data) => {
+      addMessage(data); // Recebe mensagens do usuário
+      broadcast(data); // Retransmite a mensagem para todos
+    });
+  });
 }
 
 // Conectar ao host fixo
@@ -107,28 +134,12 @@ peer.on('open', (id) => {
 
   // Verifica se este é o host
   if (id === HOST_ID) {
-    addMessage('Você é o host da sala!');
-    peer.on('connection', (connection) => {
-      addMessage('Novo usuário conectado!');
-      connection.on('data', (data) => {
-        addMessage(data); // Recebe mensagens do usuário
-        broadcast(data); // Retransmite a mensagem para todos
-      });
-    });
+    startAsHost();
   } else {
     // Conecta ao host fixo
     connectToHost();
   }
 });
-
-// Função para enviar mensagem para todos os conectados (apenas para o host)
-function broadcast(message) {
-  peer.connections[HOST_ID].forEach(conn => {
-    if (conn.open) {
-      conn.send(message);
-    }
-  });
-}
 
 // Enviar mensagem ao pressionar Enter
 messageInput.addEventListener('keypress', (e) => {
@@ -137,7 +148,7 @@ messageInput.addEventListener('keypress', (e) => {
     const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
     const fullMessage = `${nick}: ${message}`;
 
-    if (peer.id === HOST_ID) {
+    if (isHost) {
       // Se for o host, envia a mensagem para todos
       broadcast(fullMessage);
       addMessage(fullMessage); // Exibe a mensagem localmente
