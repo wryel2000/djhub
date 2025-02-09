@@ -73,41 +73,6 @@ signInAnonymously(auth)
     addMessage('Erro ao conectar ao chat. Recarregue a página.');
   });
 
-    // Ouvir novas mensagens
-    const q = query(collection(db, 'messages'), orderBy('timestamp'));
-    onSnapshot(q, (snapshot) => {
-      messagesDiv.innerHTML = ''; // Limpa as mensagens atuais
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        addMessage(`${data.nick}: ${data.message}`);
-      });
-    });
-
-    // Enviar mensagem ao pressionar Enter
-    messageInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter' && messageInput.value.trim() !== '') {
-        const message = messageInput.value.trim();
-        const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
-
-        try {
-          // Salva a mensagem no Firestore
-          await addDoc(collection(db, 'messages'), {
-            nick,
-            message,
-            timestamp: serverTimestamp()
-          });
-
-          messageInput.value = ''; // Limpa o campo de input
-        } catch (error) {
-          console.error('Erro ao enviar mensagem:', error);
-        }
-      }
-    });
-  })
-  .catch((error) => {
-    console.error('Erro na autenticação anônima:', error);
-  });
-
 // Configuração do Phaser (Grid 20x20)
 const config = {
   type: Phaser.AUTO,
