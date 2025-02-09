@@ -33,7 +33,7 @@ function addMessage(message) {
 
 // Autenticação anônima
 signInAnonymously(auth)
-  .then(() => {
+  .then((userCredential) => {
     console.log('Usuário autenticado anonimamente.');
 
     // Ouvir novas mensagens
@@ -67,6 +67,9 @@ signInAnonymously(auth)
         }
       }
     });
+
+    // Inicializa o Phaser após a autenticação
+    initializePhaser(userCredential.user.uid);
   })
   .catch((error) => {
     console.error('Erro na autenticação anônima:', error);
@@ -74,106 +77,108 @@ signInAnonymously(auth)
   });
 
 // Configuração do Phaser (Grid 20x20)
-const config = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 800,
-  parent: 'game-container',
-  scene: {
-    preload: preload,
-    create: create,
-    update: update
-  },
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 0 },
-      debug: false
+function initializePhaser(userId) {
+  const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 800,
+    parent: 'game-container',
+    scene: {
+      preload: preload,
+      create: create,
+      update: update
+    },
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { y: 0 },
+        debug: false
+      }
     }
-  }
-};
+  };
 
-const game = new Phaser.Game(config);
+  const game = new Phaser.Game(config);
 
-let avatar;
-let otherAvatars = {}; // Armazena os avatares de outros usuários
+  let avatar;
+  let otherAvatars = {}; // Armazena os avatares de outros usuários
 
-function preload() {
-  // Carrega o sprite do avatar
-  this.load.image('avatar', 'assets/avatar.png');
-}
-
-function create() {
-  // Cria o grid 20x20
-  const gridSize = 20;
-  const cellSize = 40; // Tamanho de cada célula do grid
-
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      const x = i * cellSize;
-      const y = j * cellSize;
-      this.add.rectangle(x, y, cellSize, cellSize, 0x444444).setOrigin(0);
-    }
+  function preload() {
+    // Carrega o sprite do avatar
+    this.load.image('avatar', 'assets/avatar.png');
   }
 
-  // Adiciona o avatar do usuário atual no centro do grid
-  avatar = this.physics.add.sprite(400, 400, 'avatar').setScale(0.5);
-  avatar.setCollideWorldBounds(true);
+  function create() {
+    // Cria o grid 20x20
+    const gridSize = 20;
+    const cellSize = 40; // Tamanho de cada célula do grid
 
-  // Ouvir mudanças na posição dos avatares
-  const avatarsRef = collection(db, 'avatars');
-  onSnapshot(avatarsRef, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      const data = change.doc.data();
-      const id = change.doc.id;
-
-      if (change.type === 'added' || change.type === 'modified') {
-        // Adiciona ou atualiza o avatar de outro usuário
-        if (!otherAvatars[id]) {
-          otherAvatars[id] = this.add.sprite(data.x, data.y, 'avatar').setScale(0.5);
-        } else {
-          otherAvatars[id].setPosition(data.x, data.y);
-        }
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const x = i * cellSize;
+        const y = j * cellSize;
+        this.add.rectangle(x, y, cellSize, cellSize, 0x444444).setOrigin(0);
       }
+    }
 
-      if (change.type === 'removed') {
-        // Remove o avatar de outro usuário
-        if (otherAvatars[id]) {
-          otherAvatars[id].destroy();
-          delete otherAvatars[id];
+    // Adiciona o avatar do usuário atual no centro do grid
+    avatar = this.physics.add.sprite(400, 400, 'avatar').setScale(0.5);
+    avatar.setCollideWorldBounds(true);
+
+    // Ouvir mudanças na posição dos avatares
+    const avatarsRef = collection(db, 'avatars');
+    onSnapshot(avatarsRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const id = change.doc.id;
+
+        if (change.type === 'added' || change.type === 'modified') {
+          // Adiciona ou atualiza o avatar de outro usuário
+          if (!otherAvatars[id]) {
+            otherAvatars[id] = this.add.sprite(data.x, data.y, 'avatar').setScale(0.5);
+          } else {
+            otherAvatars[id].setPosition(data.x, data.y);
+          }
         }
-      }
+
+        if (change.type === 'removed') {
+          // Remove o avatar de outro usuário
+          if (otherAvatars[id]) {
+            otherAvatars[id].destroy();
+            delete otherAvatars[id];
+          }
+        }
+      });
     });
-  });
-}
-
-function update() {
-  // Movimentação do avatar com WASD
-  const cursors = this.input.keyboard.createCursorKeys();
-  const velocity = 100;
-
-  if (cursors.left.isDown) {
-    avatar.setVelocityX(-velocity);
-  } else if (cursors.right.isDown) {
-    avatar.setVelocityX(velocity);
-  } else {
-    avatar.setVelocityX(0);
   }
 
-  if (cursors.up.isDown) {
-    avatar.setVelocityY(-velocity);
-  } else if (cursors.down.isDown) {
-    avatar.setVelocityY(velocity);
-  } else {
-    avatar.setVelocityY(0);
+  function update() {
+    // Movimentação do avatar com WASD
+    const cursors = this.input.keyboard.createCursorKeys();
+    const velocity = 100;
+
+    if (cursors.left.isDown) {
+      avatar.setVelocityX(-velocity);
+    } else if (cursors.right.isDown) {
+      avatar.setVelocityX(velocity);
+    } else {
+      avatar.setVelocityX(0);
+    }
+
+    if (cursors.up.isDown) {
+      avatar.setVelocityY(-velocity);
+    } else if (cursors.down.isDown) {
+      avatar.setVelocityY(velocity);
+    } else {
+      avatar.setVelocityY(0);
+    }
+
+    // Atualiza a posição do avatar no Firestore
+    const avatarsRef = collection(db, 'avatars');
+    const userAvatarRef = doc(avatarsRef, userId);
+
+    setDoc(userAvatarRef, {
+      x: avatar.x,
+      y: avatar.y
+    }, { merge: true }); // Usa merge para não sobrescrever outros campos
   }
-
-  // Atualiza a posição do avatar no Firestore
-  const avatarsRef = collection(db, 'avatars');
-  const userAvatarRef = doc(avatarsRef, auth.currentUser.uid);
-
-  setDoc(userAvatarRef, {
-    x: avatar.x,
-    y: avatar.y
-  }, { merge: true }); // Usa merge para não sobrescrever outros campos
 }
