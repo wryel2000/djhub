@@ -64,6 +64,10 @@ function update() {
     avatar.setVelocityY(0);
   }
 }
+// Importações do Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+
 // Configuração do Firebase com suas credenciais
 const firebaseConfig = {
   apiKey: "AIzaSyAB7-bISq2XHqTu2VTGtsihD9RDg21Z4tU",
@@ -76,8 +80,8 @@ const firebaseConfig = {
 };
 
 // Inicializa o Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
@@ -92,29 +96,32 @@ function addMessage(message) {
 }
 
 // Ouvir novas mensagens
-db.collection('messages')
-  .orderBy('timestamp')
-  .onSnapshot((snapshot) => {
-    messagesDiv.innerHTML = ''; // Limpa as mensagens atuais
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      addMessage(`${data.nick}: ${data.message}`);
-    });
+const q = query(collection(db, 'messages'), orderBy('timestamp'));
+onSnapshot(q, (snapshot) => {
+  messagesDiv.innerHTML = ''; // Limpa as mensagens atuais
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    addMessage(`${data.nick}: ${data.message}`);
   });
+});
 
 // Enviar mensagem ao pressionar Enter
-messageInput.addEventListener('keypress', (e) => {
+messageInput.addEventListener('keypress', async (e) => {
   if (e.key === 'Enter' && messageInput.value.trim() !== '') {
     const message = messageInput.value.trim();
     const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
 
-    // Salva a mensagem no Firestore
-    db.collection('messages').add({
-      nick,
-      message,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    try {
+      // Salva a mensagem no Firestore
+      await addDoc(collection(db, 'messages'), {
+        nick,
+        message,
+        timestamp: serverTimestamp()
+      });
 
-    messageInput.value = ''; // Limpa o campo de input
+      messageInput.value = ''; // Limpa o campo de input
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+    }
   }
 });
