@@ -1,6 +1,6 @@
 // Importações do Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
 // Configuração do Firebase com suas credenciais
@@ -96,6 +96,7 @@ const config = {
 const game = new Phaser.Game(config);
 
 let avatar;
+let otherAvatars = {}; // Armazena os avatares de outros usuários
 
 function preload() {
   // Carrega o sprite do avatar
@@ -115,9 +116,35 @@ function create() {
     }
   }
 
-  // Adiciona o avatar no centro do grid
+  // Adiciona o avatar do usuário atual no centro do grid
   avatar = this.physics.add.sprite(400, 400, 'avatar').setScale(0.5);
   avatar.setCollideWorldBounds(true);
+
+  // Ouvir mudanças na posição dos avatares
+  const avatarsRef = collection(db, 'avatars');
+  onSnapshot(avatarsRef, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const data = change.doc.data();
+      const id = change.doc.id;
+
+      if (change.type === 'added' || change.type === 'modified') {
+        // Adiciona ou atualiza o avatar de outro usuário
+        if (!otherAvatars[id]) {
+          otherAvatars[id] = this.add.sprite(data.x, data.y, 'avatar').setScale(0.5);
+        } else {
+          otherAvatars[id].setPosition(data.x, data.y);
+        }
+      }
+
+      if (change.type === 'removed') {
+        // Remove o avatar de outro usuário
+        if (otherAvatars[id]) {
+          otherAvatars[id].destroy();
+          delete otherAvatars[id];
+        }
+      }
+    });
+  });
 }
 
 function update() {
@@ -140,4 +167,13 @@ function update() {
   } else {
     avatar.setVelocityY(0);
   }
+
+  // Atualiza a posição do avatar no Firestore
+  const avatarsRef = collection(db, 'avatars');
+  const userAvatarRef = doc(avatarsRef, auth.currentUser.uid);
+
+  setDoc(userAvatarRef, {
+    x: avatar.x,
+    y: avatar.y
+  }, { merge: true }); // Usa merge para não sobrescrever outros campos
 }
