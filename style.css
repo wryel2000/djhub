@@ -9,8 +9,10 @@ body {
   color: #fff;
 }
 
-canvas {
-  display: block;
+#game-container {
+  width: 800px;
+  height: 800px;
+  background-color: #1e1e1e;
 }
 
 #chat {
