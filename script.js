@@ -64,25 +64,24 @@ function update() {
     avatar.setVelocityY(0);
   }
 }
-// Configuração do PeerJS
-const peer = new Peer({
-  host: '0.peerjs.com',
-  port: 443,
-  path: '/',
-  secure: true,
-  debug: 3
-});
+// Configuração do Firebase com suas credenciais
+const firebaseConfig = {
+  apiKey: "AIzaSyAB7-bISq2XHqTu2VTGtsihD9RDg21Z4tU",
+  authDomain: "djhubbing.firebaseapp.com",
+  projectId: "djhubbing",
+  storageBucket: "djhubbing.firebasestorage.app",
+  messagingSenderId: "713077795174",
+  appId: "1:713077795174:web:4721fa2513decb9c83c0a7",
+  measurementId: "G-VCSTRFC25K"
+};
 
-let hostConnection;
-let isHost = false;
-const connections = []; // Armazena todas as conexões
+// Inicializa o Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
-const connectDialog = document.getElementById('connectDialog');
-const roomCodeInput = document.getElementById('roomCode');
-const connectButton = document.getElementById('connectButton');
 
 // Função para adicionar mensagem ao chat
 function addMessage(message) {
@@ -92,86 +91,29 @@ function addMessage(message) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight; // Rola para a última mensagem
 }
 
-// Função para enviar mensagem para todos os conectados (apenas para o host)
-function broadcast(message) {
-  connections.forEach(conn => {
-    if (conn.open) {
-      conn.send(message);
-    }
-  });
-}
-
-// Iniciar conexão como host
-function startAsHost() {
-  isHost = true;
-  addMessage('Você é o host da sala!');
-  connectDialog.style.display = 'none'; // Esconde a caixa de diálogo
-
-  // Receber conexões de outros usuários
-  peer.on('connection', (connection) => {
-    addMessage('Novo usuário conectado!');
-    connections.push(connection);
-    connection.on('data', (data) => {
-      addMessage(data); // Recebe mensagens do usuário
-      broadcast(data); // Retransmite a mensagem para todos
+// Ouvir novas mensagens
+db.collection('messages')
+  .orderBy('timestamp')
+  .onSnapshot((snapshot) => {
+    messagesDiv.innerHTML = ''; // Limpa as mensagens atuais
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      addMessage(`${data.nick}: ${data.message}`);
     });
   });
-}
-
-// Conectar ao host
-function connectToHost(hostId) {
-  hostConnection = peer.connect(hostId);
-  hostConnection.on('open', () => {
-    addMessage('Conectado à sala!');
-    connectDialog.style.display = 'none'; // Esconde a caixa de diálogo
-    hostConnection.on('data', (data) => {
-      addMessage(data); // Recebe mensagens do host
-    });
-  });
-}
-
-// Iniciar conexão
-peer.on('open', (id) => {
-  addMessage(`Seu ID: ${id}`);
-
-  // Verifica se já existe um host na URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const hostId = urlParams.get('host');
-
-  if (hostId) {
-    // Conecta ao host existente
-    connectToHost(hostId);
-  } else {
-    // Torna-se o host da sala
-    startAsHost();
-    window.history.replaceState({}, '', `?host=${id}`); // Adiciona o ID do host na URL
-  }
-});
-
-// Conectar à sala ao clicar no botão
-connectButton.addEventListener('click', () => {
-  const hostId = roomCodeInput.value.trim();
-  if (hostId) {
-    connectToHost(hostId);
-  }
-});
 
 // Enviar mensagem ao pressionar Enter
 messageInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter' && messageInput.value.trim() !== '') {
     const message = messageInput.value.trim();
     const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
-    const fullMessage = `${nick}: ${message}`;
 
-    if (isHost) {
-      // Se for o host, envia a mensagem para todos
-      broadcast(fullMessage);
-      addMessage(fullMessage); // Exibe a mensagem localmente
-    } else if (hostConnection && hostConnection.open) {
-      // Se não for o host, envia a mensagem para o host
-      hostConnection.send(fullMessage);
-      addMessage(fullMessage); // Exibe a mensagem localmente
-    }
+    // Salva a mensagem no Firestore
+    db.collection('messages').add({
+      nick,
+      message,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
     messageInput.value = ''; // Limpa o campo de input
   }
