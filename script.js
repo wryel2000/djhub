@@ -73,15 +73,16 @@ const peer = new Peer({
   debug: 3
 });
 
-// ID fixo do host
-const HOST_ID = 'SALA123'; // Defina um ID fixo para o host
-
 let hostConnection;
 let isHost = false;
+const connections = []; // Armazena todas as conexões
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
+const connectDialog = document.getElementById('connectDialog');
+const roomCodeInput = document.getElementById('roomCode');
+const connectButton = document.getElementById('connectButton');
 
 // Função para adicionar mensagem ao chat
 function addMessage(message) {
@@ -93,12 +94,10 @@ function addMessage(message) {
 
 // Função para enviar mensagem para todos os conectados (apenas para o host)
 function broadcast(message) {
-  Object.values(peer.connections).forEach(connections => {
-    connections.forEach(conn => {
-      if (conn.open) {
-        conn.send(message);
-      }
-    });
+  connections.forEach(conn => {
+    if (conn.open) {
+      conn.send(message);
+    }
   });
 }
 
@@ -106,10 +105,12 @@ function broadcast(message) {
 function startAsHost() {
   isHost = true;
   addMessage('Você é o host da sala!');
+  connectDialog.style.display = 'none'; // Esconde a caixa de diálogo
 
   // Receber conexões de outros usuários
   peer.on('connection', (connection) => {
     addMessage('Novo usuário conectado!');
+    connections.push(connection);
     connection.on('data', (data) => {
       addMessage(data); // Recebe mensagens do usuário
       broadcast(data); // Retransmite a mensagem para todos
@@ -117,11 +118,12 @@ function startAsHost() {
   });
 }
 
-// Conectar ao host fixo
-function connectToHost() {
-  hostConnection = peer.connect(HOST_ID);
+// Conectar ao host
+function connectToHost(hostId) {
+  hostConnection = peer.connect(hostId);
   hostConnection.on('open', () => {
     addMessage('Conectado à sala!');
+    connectDialog.style.display = 'none'; // Esconde a caixa de diálogo
     hostConnection.on('data', (data) => {
       addMessage(data); // Recebe mensagens do host
     });
@@ -132,12 +134,25 @@ function connectToHost() {
 peer.on('open', (id) => {
   addMessage(`Seu ID: ${id}`);
 
-  // Verifica se este é o host
-  if (id === HOST_ID) {
-    startAsHost();
+  // Verifica se já existe um host na URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const hostId = urlParams.get('host');
+
+  if (hostId) {
+    // Conecta ao host existente
+    connectToHost(hostId);
   } else {
-    // Conecta ao host fixo
-    connectToHost();
+    // Torna-se o host da sala
+    startAsHost();
+    window.history.replaceState({}, '', `?host=${id}`); // Adiciona o ID do host na URL
+  }
+});
+
+// Conectar à sala ao clicar no botão
+connectButton.addEventListener('click', () => {
+  const hostId = roomCodeInput.value.trim();
+  if (hostId) {
+    connectToHost(hostId);
   }
 });
 
