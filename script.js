@@ -73,9 +73,10 @@ const peer = new Peer({
   debug: 3
 });
 
+// ID fixo do host
+const HOST_ID = 'SALA123'; // Defina um ID fixo para o host
+
 let hostConnection;
-let isHost = false;
-const connections = []; // Armazena todas as conexões
 
 // Elementos do chat
 const messagesDiv = document.getElementById('messages');
@@ -89,27 +90,11 @@ function addMessage(message) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight; // Rola para a última mensagem
 }
 
-// Função para enviar mensagem para todos os conectados
-function broadcast(message) {
-  connections.forEach(conn => {
-    if (conn.open) {
-      conn.send(message);
-    }
-  });
-}
-
-// Iniciar conexão como host
-function startAsHost() {
-  isHost = true;
-  addMessage('Você é o host da sala!');
-}
-
-// Conectar ao host
-function connectToHost(hostId) {
-  hostConnection = peer.connect(hostId);
+// Conectar ao host fixo
+function connectToHost() {
+  hostConnection = peer.connect(HOST_ID);
   hostConnection.on('open', () => {
     addMessage('Conectado à sala!');
-    connections.push(hostConnection); // Adiciona a conexão ao host na lista
     hostConnection.on('data', (data) => {
       addMessage(data); // Recebe mensagens do host
     });
@@ -120,31 +105,30 @@ function connectToHost(hostId) {
 peer.on('open', (id) => {
   addMessage(`Seu ID: ${id}`);
 
-  // Verifica se já existe um host na sala
-  const urlParams = new URLSearchParams(window.location.search);
-  const hostId = urlParams.get('host');
-
-  if (hostId) {
-    // Conecta ao host existente
-    connectToHost(hostId);
-  } else {
-    // Torna-se o host da sala
-    startAsHost();
-    window.history.replaceState({}, '', `?host=${id}`); // Adiciona o ID do host na URL
-  }
-});
-
-// Receber conexões (apenas para o host)
-peer.on('connection', (connection) => {
-  if (isHost) {
-    connections.push(connection); // Adiciona a nova conexão à lista
-    addMessage('Novo usuário conectado!');
-    connection.on('data', (data) => {
-      addMessage(data); // Recebe mensagens do usuário
-      broadcast(data); // Retransmite a mensagem para todos
+  // Verifica se este é o host
+  if (id === HOST_ID) {
+    addMessage('Você é o host da sala!');
+    peer.on('connection', (connection) => {
+      addMessage('Novo usuário conectado!');
+      connection.on('data', (data) => {
+        addMessage(data); // Recebe mensagens do usuário
+        broadcast(data); // Retransmite a mensagem para todos
+      });
     });
+  } else {
+    // Conecta ao host fixo
+    connectToHost();
   }
 });
+
+// Função para enviar mensagem para todos os conectados (apenas para o host)
+function broadcast(message) {
+  peer.connections[HOST_ID].forEach(conn => {
+    if (conn.open) {
+      conn.send(message);
+    }
+  });
+}
 
 // Enviar mensagem ao pressionar Enter
 messageInput.addEventListener('keypress', (e) => {
@@ -153,7 +137,7 @@ messageInput.addEventListener('keypress', (e) => {
     const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
     const fullMessage = `${nick}: ${message}`;
 
-    if (isHost) {
+    if (peer.id === HOST_ID) {
       // Se for o host, envia a mensagem para todos
       broadcast(fullMessage);
       addMessage(fullMessage); // Exibe a mensagem localmente
