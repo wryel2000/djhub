@@ -32,39 +32,3 @@ canvas {
   box-sizing: border-box;
   margin-top: 10px;
 }
-
-#connectDialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #1e1e1e;
-  padding: 20px;
-  border-radius: 10px;
-  text-align: center;
-  z-index: 1000;
-}
-
-#connectDialog h3 {
-  margin: 0 0 10px 0;
-}
-
-#roomCode {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  margin-bottom: 10px;
-}
-
-#connectButton {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  cursor: pointer;
-}
-
-#connectButton:hover {
-  background-color: #45a049;
-}
