@@ -65,8 +65,8 @@ function update() {
   }
 }
 // Configuração do Pusher
-const pusher = new Pusher('SUA_CHAVE_AQUI', { // Substitua pela sua chave do Pusher
-  cluster: 'SEU_CLUSTER_AQUI', // Substitua pelo seu cluster
+const pusher = new Pusher('9e46593689640f3ea9ec', { // Substitua pela sua chave do Pusher
+  cluster: 'sa1', // Substitua pelo seu cluster
   encrypted: true
 });
 
