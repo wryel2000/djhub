@@ -3,8 +3,28 @@ body {
   padding: 0;
   overflow: hidden;
   background-color: #2d2d2d;
+  display: flex;
+  justify-content: space-between;
 }
 canvas {
   display: block;
-  margin: 0 auto;
+}
+#chat {
+  width: 300px;
+  height: 800px;
+  background-color: #1e1e1e;
+  padding: 10px;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  overflow-y: auto;
+}
+#messages {
+  height: 740px;
+  overflow-y: auto;
+}
+#messageInput {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  margin-top: 10px;
 }
