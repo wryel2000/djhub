@@ -64,3 +64,38 @@ function update() {
     avatar.setVelocityY(0);
   }
 }
+// Configuração do Pusher
+const pusher = new Pusher('SUA_CHAVE_AQUI', { // Substitua pela sua chave do Pusher
+  cluster: 'SEU_CLUSTER_AQUI', // Substitua pelo seu cluster
+  encrypted: true
+});
+
+const channel = pusher.subscribe('chat');
+
+// Elementos do chat
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+
+// Função para adicionar mensagem ao chat
+function addMessage(message) {
+  const messageElement = document.createElement('div');
+  messageElement.textContent = message;
+  messagesDiv.appendChild(messageElement);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight; // Rola para a última mensagem
+}
+
+// Ouvir novas mensagens
+channel.bind('message', (data) => {
+  addMessage(`${data.nick}: ${data.message}`);
+});
+
+// Enviar mensagem ao pressionar Enter
+messageInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && messageInput.value.trim() !== '') {
+    const message = messageInput.value.trim();
+    const nick = 'Usuário' + Math.floor(Math.random() * 1000); // Nick aleatório
+    channel.trigger('client-message', { nick, message }); // Envia a mensagem
+    addMessage(`${nick}: ${message}`); // Exibe a mensagem localmente
+    messageInput.value = ''; // Limpa o campo de input
+  }
+});
