@@ -102,6 +102,15 @@ function initializePhaser(userId) {
   let avatar;
   let otherAvatars = {}; // Armazena os avatares de outros usuários
 
+  // Função para gerar uma posição aleatória no grid
+  function getRandomPosition() {
+    const gridSize = 20;
+    const cellSize = 40;
+    const x = Math.floor(Math.random() * gridSize) * cellSize + cellSize / 2;
+    const y = Math.floor(Math.random() * gridSize) * cellSize + cellSize / 2;
+    return { x, y };
+  }
+
   function preload() {
     // Carrega o sprite do avatar
     this.load.image('avatar', 'assets/avatar.png');
@@ -120,12 +129,20 @@ function initializePhaser(userId) {
       }
     }
 
-    // Adiciona o avatar do usuário atual no centro do grid
-    avatar = this.physics.add.sprite(400, 400, 'avatar').setScale(0.5);
+    // Adiciona o avatar do usuário atual em uma posição aleatória
+    const randomPosition = getRandomPosition();
+    avatar = this.physics.add.sprite(randomPosition.x, randomPosition.y, 'avatar').setScale(0.5);
     avatar.setCollideWorldBounds(true);
 
-    // Ouvir mudanças na posição dos avatares
+    // Salva a posição inicial do avatar no Firestore
     const avatarsRef = collection(db, 'avatars');
+    const userAvatarRef = doc(avatarsRef, userId);
+    setDoc(userAvatarRef, {
+      x: randomPosition.x,
+      y: randomPosition.y
+    }, { merge: true });
+
+    // Ouvir mudanças na posição dos avatares
     onSnapshot(avatarsRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
@@ -175,10 +192,9 @@ function initializePhaser(userId) {
     // Atualiza a posição do avatar no Firestore
     const avatarsRef = collection(db, 'avatars');
     const userAvatarRef = doc(avatarsRef, userId);
-
     setDoc(userAvatarRef, {
       x: avatar.x,
       y: avatar.y
-    }, { merge: true }); // Usa merge para não sobrescrever outros campos
+    }, { merge: true });
   }
 }
