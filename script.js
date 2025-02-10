@@ -1,6 +1,6 @@
 // Importações do Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, serverTimestamp, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, serverTimestamp, onSnapshot, query, orderBy, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
 // Configuração do Firebase com suas credenciais
@@ -70,6 +70,7 @@ signInAnonymously(auth)
 
     // Inicializa o Phaser após a autenticação
     initializePhaser(userCredential.user.uid);
+    initializeDJSystem(userCredential.user.uid); // Inicializa o sistema de DJ
   })
   .catch((error) => {
     console.error('Erro na autenticação anônima:', error);
@@ -198,7 +199,8 @@ function initializePhaser(userId) {
     }, { merge: true });
   }
 }
-// Função para entrar na fila
+
+// Funções para o sistema de DJ
 async function joinQueue(userId) {
   const queueRef = collection(db, 'djQueue');
   await addDoc(queueRef, {
@@ -207,7 +209,6 @@ async function joinQueue(userId) {
   });
 }
 
-// Função para obter a fila
 async function getQueue() {
   const queueRef = collection(db, 'djQueue');
   const snapshot = await getDocs(queueRef);
@@ -215,13 +216,39 @@ async function getQueue() {
   return queue;
 }
 
-// Função para escolher a música do SoundCloud
 async function chooseSong(userId, songUrl) {
-  // Aqui você pode armazenar a música escolhida em uma coleção
-  const songRef = doc(db, 'currentSong', 'playing'); // Exemplo de documento
+  const songRef = doc(db, 'currentSong', 'playing');
   await setDoc(songRef, {
     userId,
     songUrl,
     timestamp: serverTimestamp()
   });
+}
+
+// Inicializa o sistema de DJ
+function initializeDJSystem(userId) {
+  document.getElementById('joinQueueButton').addEventListener('click', async () => {
+    await joinQueue(userId);
+    alert('Você entrou na fila como DJ!');
+  });
+
+  document.getElementById('chooseSongButton').addEventListener('click', async () => {
+    const songUrl = document.getElementById('songUrlInput').value;
+    await chooseSong(userId, songUrl);
+    alert('Música escolhida!');
+  });
+
+  // Ouvir a música atual
+  onSnapshot(doc(db, 'currentSong', 'playing'), (doc) => {
+    const data = doc.data();
+    if (data) {
+      playSong(data.songUrl);
+    }
+  });
+}
+
+// Função para tocar a música
+function playSong(songUrl) {
+  const audio = new Audio(songUrl);
+  audio.play();
 }
