@@ -198,3 +198,30 @@ function initializePhaser(userId) {
     }, { merge: true });
   }
 }
+// Função para entrar na fila
+async function joinQueue(userId) {
+  const queueRef = collection(db, 'djQueue');
+  await addDoc(queueRef, {
+    userId,
+    timestamp: serverTimestamp()
+  });
+}
+
+// Função para obter a fila
+async function getQueue() {
+  const queueRef = collection(db, 'djQueue');
+  const snapshot = await getDocs(queueRef);
+  const queue = snapshot.docs.map(doc => doc.data());
+  return queue;
+}
+
+// Função para escolher a música do SoundCloud
+async function chooseSong(userId, songUrl) {
+  // Aqui você pode armazenar a música escolhida em uma coleção
+  const songRef = doc(db, 'currentSong', 'playing'); // Exemplo de documento
+  await setDoc(songRef, {
+    userId,
+    songUrl,
+    timestamp: serverTimestamp()
+  });
+}
