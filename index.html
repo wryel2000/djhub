@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grid 20x20 + Chat</title>
+  <title>Grid 20x20 + Chat + DJ System</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,12 +14,12 @@
     <div id="messages"></div>
     <input type="text" id="messageInput" placeholder="Digite sua mensagem..." />
   </div>
+  <div id="queue">
+    <button id="joinQueueButton">Entrar na fila como DJ</button>
+    <input type="text" id="songUrlInput" placeholder="Cole o link do SoundCloud aqui..." />
+    <button id="chooseSongButton">Escolher Música</button>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
   <script type="module" src="script.js"></script>
-  <div id="queue">
-  <button id="joinQueueButton">Entrar na fila como DJ</button>
-  <input type="text" id="songUrlInput" placeholder="Cole o link do SoundCloud aqui..." />
-  <button id="chooseSongButton">Escolher Música</button>
-</div>
 </body>
 </html>
